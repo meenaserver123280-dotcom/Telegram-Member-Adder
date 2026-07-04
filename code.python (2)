@@ -1,0 +1,158 @@
+# channel.py - Telegram Group Mein Members Add Karne Ka Script (Safe Mode)
+# Telethon Library Use Karta Hai
+
+import asyncio
+import sys
+import time
+from datetime import datetime
+from telethon import TelegramClient
+from telethon.tl.functions.channels import InviteToChannelRequest
+from telethon.tl.functions.messages import AddChatUserRequest
+from telethon.errors import (
+    UserPrivacyRestrictedError,
+    FloodWaitError,
+    UserNotMutualContactError,
+    UserChannelsTooMuchError,
+    PeerFloodError
+)
+
+# ===== YAHAN APNI VALUES DALEN =====
+API_ID = 1234567          
+API_HASH = "abcd1234xyz"  
+PHONE_NUMBER = "+911234567890"  
+GROUP_USERNAME = "@aapkagroupusername"  
+# ===================================
+
+# ===== SAFETY LIMITS (BADAL SAKTE HO) =====
+MAX_MEMBERS_PER_RUN = 50       # Ek baar mein kitne members add karne hain (Telegram limit ~50)
+DELAY_BETWEEN_ADD = 5          # Har member ke baad kitne seconds rukna hai (seconds)
+BATCH_SIZE = 5                 # Kitne members ke baad extra bada delay lena hai
+BATCH_DELAY = 10               # Batch ke baad extra delay (seconds)
+FLOOD_WAIT_BREAK = 3600        # FloodWait aaye to kitni der rukna hai (seconds = 1 ghanta)
+# ==========================================
+
+from members import members_list
+
+async def main():
+    print("=" * 50)
+    print("🤖 TELEGRAM MEMBER ADDER - SAFE MODE")
+    print(f"📅 Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 50)
+
+    # Client banayein
+    client = TelegramClient('session_name', API_ID, API_HASH)
+    await client.start(phone=PHONE_NUMBER)
+    print("✅ Login successful!")
+
+    # Group resolve karein
+    try:
+        group = await client.get_entity(GROUP_USERNAME)
+        print(f"✅ Group found: {group.title} (ID: {group.id})")
+    except Exception as e:
+        print(f"❌ Group not found: {e}")
+        return
+
+    # Sirf limited members process karein (MAX_MEMBERS_PER_RUN)
+    to_process = members_list[:MAX_MEMBERS_PER_RUN]
+    
+    added_count = 0
+    failed_count = 0
+    flood_wait_count = 0
+
+    print(f"\n🚀 Adding {len(to_process)} members to {GROUP_USERNAME}...")
+    print(f"⚙️  Settings: {DELAY_BETWEEN_ADD}s delay per member, {BATCH_SIZE} members per batch\n")
+
+    for i, member in enumerate(to_process, 1):
+        username = member["username"]
+        name = member["name"]
+
+        try:
+            # User ko resolve karein
+            try:
+                user = await client.get_entity(username)
+            except Exception:
+                print(f"[{i}/{len(to_process)}] ❌ {username} - Telegram par nahi mila")
+                failed_count += 1
+                continue
+
+            # Group mein add karein
+            try:
+                # Supergroup/Channel ke liye
+                await client(InviteToChannelRequest(group, [user]))
+                print(f"[{i}/{len(to_process)}] ✅ {username} ({name}) - Added")
+                added_count += 1
+
+            except UserPrivacyRestrictedError:
+                print(f"[{i}/{len(to_process)}] ⚠️ {username} - Privacy settings ki wajah se add nahi ho sakta")
+                failed_count += 1
+
+            except UserChannelsTooMuchError:
+                print(f"[{i}/{len(to_process)}] ⚠️ {username} - Already bahut saare groups mein hai")
+                failed_count += 1
+
+            except PeerFloodError:
+                print(f"🚨 PEER FLOOD ERROR! Account temporarily restricted!")
+                print(f"⏸️  Script rokh raha hai. 1 ghante baad dobara chalana.")
+                flood_wait_count += 1
+                break  # Script stop karo
+
+            except FloodWaitError as e:
+                wait_time = e.seconds
+                print(f"⏳ FLOOD WAIT: {wait_time} seconds ({wait_time/60:.1f} minutes)")
+                flood_wait_count += 1
+                
+                if wait_time > 300:  # 5 minute se zyada ho to full break
+                    print(f"⚠️ Zyada wait hai. Script yahin rokh raha hu.")
+                    print(f"⏰ {wait_time//60} minute baad dobara chalao.")
+                    break
+                else:
+                    print(f"⏳ {wait_time} seconds wait kar raha hu...")
+                    time.sleep(wait_time)
+                    # Retry
+                    try:
+                        await client(InviteToChannelRequest(group, [user]))
+                        print(f"[{i}/{len(to_process)}] ✅ {username} - Added after wait")
+                        added_count += 1
+                    except Exception as e2:
+                        print(f"[{i}/{len(to_process)}] ❌ {username} - Retry failed: {e2}")
+                        failed_count += 1
+
+            except Exception as e:
+                print(f"[{i}/{len(to_process)}] ❌ {username} - Error: {str(e)[:50]}")
+                failed_count += 1
+
+        except KeyboardInterrupt:
+            print("\n⛔ User ne interrupt kiya. Script band.")
+            break
+
+        # ===== SAFETY DELAYS =====
+        # Har member ke baad normal delay
+        time.sleep(DELAY_BETWEEN_ADD)
+
+        # Har BATCH_SIZE members ke baad extra delay
+        if i % BATCH_SIZE == 0 and i < len(to_process):
+            print(f"⏸️  Batch complete. {BATCH_DELAY} seconds ka break...")
+            time.sleep(BATCH_DELAY)
+
+        # Har 20 members ke baad 1 minute ka long break
+        if i % 20 == 0 and i < len(to_process):
+            print(f"☕ 20 members done. 60 seconds ka long break le raha hu...")
+            time.sleep(60)
+
+    print("\n" + "=" * 50)
+    print("📊 FINAL REPORT")
+    print(f"⏰ End Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"✅ Successfully added: {added_count}")
+    print(f"❌ Failed: {failed_count}")
+    print(f"⚠️  Flood/Errors: {flood_wait_count}")
+    print(f"📝 Total attempted: {added_count + failed_count}")
+    print("=" * 50)
+    
+    if added_count >= 40:
+        print("\n💡 TIP: Aaj itna kaafi hai. Kal dobara chalao.")
+        print("💡 TIP: Naye account se chalao ya 24 ghante baad.")
+
+    await client.disconnect()
+
+if __name__ == "__main__":
+    asyncio.run(main())
