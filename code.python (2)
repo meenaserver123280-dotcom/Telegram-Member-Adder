@@ -17,10 +17,10 @@ from telethon.errors import (
 )
 
 # ===== YAHAN APNI VALUES DALEN =====
-API_ID = 1234567          
-API_HASH = "abcd1234xyz"  
-PHONE_NUMBER = "+911234567890"  
-GROUP_USERNAME = "@aapkagroupusername"  
+API_ID = 39258483          
+API_HASH = "cbfe59ad670084dac4381880f3ca6a35"  
+PHONE_NUMBER = "+573235715143"  
+GROUP_USERNAME = "@mrssrsprsgrs"  
 # ===================================
 
 # ===== SAFETY LIMITS (BADAL SAKTE HO) =====
