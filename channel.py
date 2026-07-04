@@ -10,10 +10,10 @@ from telethon.errors import UserPrivacyRestrictedError, FloodWaitError, UserNotM
 import time
 
 # ===== YAHAN APNI VALUES DALEN =====
-API_ID = 1234567          # Apna API ID (my.telegram.org se lo)
-API_HASH = "abcd1234xyz"  # Apna API Hash
-PHONE_NUMBER = "+911234567890"  # Apna Telegram number
-GROUP_USERNAME = "@aapkagroupusername"  # Jis group mein add karna hai uska username
+API_ID = 39258483          # Apna API ID (my.telegram.org se lo)
+API_HASH = "cbfe59ad670084dac4381880f3ca6a35"  # Apna API Hash
+PHONE_NUMBER = "+919302369504"  # Apna Telegram number
+GROUP_USERNAME = "@mrssrsprsgrs"  # Jis group mein add karna hai uska username
 # ===================================
 
 # members.py se list import karo
